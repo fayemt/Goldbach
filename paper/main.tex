@@ -222,11 +222,15 @@ A minimal \texttt{scripts/constants.json}:
 }
 \end{verbatim}
 
-% --- References ---
-% keep this \nocite line so the key sources still appear:
-\nocite{OeSHP2014,BMOR2018,Platt2016}
+\clearpage
+\phantomsection
+\addcontentsline{toc}{section}{References}
 
-\bibliographystyle{abbrv}   % or 'plain'
-\bibliography{refs}
+% Force BibTeX to run even if there are no explicit \cite{...} calls:
+\nocite{*}
+
+\bibliographystyle{abbrv}    % plain/alpha/abbrv are safe
+\bibliography{refs}          % expects paper/refs.bib
+
 
 \end{document}
