@@ -31,39 +31,30 @@ jobs:
   build-paper:
     name: Build LaTeX (paper/main.tex)
     runs-on: ubuntu-latest
-    # We'll run shell steps inside paper/, but ALSO tell latex-action explicitly.
-    defaults:
-      run:
-        working-directory: paper
     steps:
       - uses: actions/checkout@v4
 
-      # latexmk + bibtex; must point latex-action at paper/ explicitly
+      # Compile with latexmk + bibtex; force bibtex run with args
       - name: Compile LaTeX
         uses: xu-cheng/latex-action@v3
         with:
           root_file: main.tex
           working_directory: paper
+          args: -pdf -interaction=nonstopmode -halt-on-error -bibtex
 
       - name: Verify output exists
-        run: test -f main.pdf
+        run: test -f paper/main.pdf
 
       - name: Compute checksums
         run: |
-          sha256sum main.pdf > ../SHA256SUMS
-          cd ..
+          sha256sum paper/main.pdf > SHA256SUMS
           if [ -f goldbach-full-release.zip ]; then sha256sum goldbach-full-release.zip >> SHA256SUMS; fi
           cat SHA256SUMS
 
       - name: Build arXiv source zip (main.tex + refs.bib)
         run: |
-          cd ..
           mkdir -p dist
-          cd paper
-          # include refs.bib if it exists; error if missing
-          test -f refs.bib
-          zip -q ../dist/goldbach-arxiv-src.zip main.tex refs.bib
-          cd ..
+          zip -q dist/goldbach-arxiv-src.zip paper/main.tex paper/refs.bib
           ls -l dist
 
       - name: Upload artifacts
