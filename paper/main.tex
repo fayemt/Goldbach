@@ -8,12 +8,9 @@
 % ----- Math and environments -----
 \usepackage{amsmath,amssymb,amsfonts,amsthm}
 \usepackage{mathtools}
-
 % ----- Layout and links -----
 \usepackage[margin=1in]{geometry}
 \usepackage[hidelinks]{hyperref}
-\usepackage[backend=bibtex,style=numeric]{biblatex} % use bibtex backend
-\addbibresource{refs.bib}
 
 % ----- Theorem-like envs and handy macros -----
 \newtheorem{theorem}{Theorem}
@@ -221,16 +218,13 @@ A minimal \texttt{scripts/constants.json}:
   "C_W": 2.0
 }
 \end{verbatim}
-
 \clearpage
 \phantomsection
 \addcontentsline{toc}{section}{References}
 
-% Force BibTeX to run even if there are no explicit \cite{...} calls:
-\nocite{*}
+% Force a bibliography even if you don't have \cite{} yet:
+\nocite{OeSHP2014,BMOR2018,Platt2016}
 
-\bibliographystyle{abbrv}    % plain/alpha/abbrv are safe
-\bibliography{refs}          % expects paper/refs.bib
-
-
+\bibliographystyle{abbrv}   % or 'plain' if you prefer
+\bibliography{refs}         % expects paper/refs.bib
 \end{document}
