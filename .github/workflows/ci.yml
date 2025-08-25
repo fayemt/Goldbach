@@ -28,7 +28,7 @@ jobs:
       - name: Run tests
         run: pytest -q
 
-    build-paper:
+  build-paper:
     name: Build LaTeX (paper/main.tex)
     runs-on: ubuntu-latest
     steps:
