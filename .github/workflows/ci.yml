@@ -1,0 +1,111 @@
+name: CI (tests + paper + release)
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  # When you push a tag like v1.0.0 this will also run and publish a release
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  python-tests:
+    name: Python tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install test deps
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: Run tests
+        run: |
+          pytest -q
+
+  build-paper:
+    name: Build LaTeX (paper/main.tex)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: paper
+    steps:
+      - uses: actions/checkout@v4
+
+      # Use a maintained LaTeX action (runs latexmk with bibtex by default)
+      - name: Compile LaTeX
+        uses: xu-cheng/latex-action@v3
+        with:
+          root_file: main.tex
+          # latexmk default uses pdflatex + bibtex; perfect for our setup
+          latexmk_use_xelatex: false
+          extra_fonts: false
+
+      - name: Verify output exists
+        run: test -f main.pdf
+
+      - name: Compute checksums
+        run: |
+          sha256sum main.pdf > ../SHA256SUMS
+          cd ..
+          if [ -f goldbach-full-release.zip ]; then sha256sum goldbach-full-release.zip >> SHA256SUMS; fi
+          cat SHA256SUMS
+
+      - name: Build arXiv source zip (main.tex + refs.bib)
+        run: |
+          cd ..
+          mkdir -p dist
+          cd paper
+          zip -q ../dist/goldbach-arxiv-src.zip main.tex refs.bib || true
+          cd ..
+          ls -l dist
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: paper-and-checks
+          path: |
+            paper/main.pdf
+            SHA256SUMS
+            dist/goldbach-arxiv-src.zip
+          if-no-files-found: error
+
+  release:
+    name: Release on tag
+    needs: [python-tests, build-paper]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: paper-and-checks
+          path: ./_artifacts
+
+      - name: Create source zip from current tag (for release)
+        run: |
+          git archive --format=zip --output goldbach-${GITHUB_REF_NAME}.zip ${GITHUB_REF_NAME}
+          ls -l
+          ls -l _artifacts
+
+      - name: Publish GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ github.ref_name }}
+          name: Goldbach Project ${{ github.ref_name }}
+          body: |
+            See CHANGELOG.md for details.
+
+            SHA-256:
+            ${{ steps.showhash.outputs.hashes }}
+          artifacts: >
+            _artifacts/paper/main.pdf,
+            _artifacts/SHA256SUMS,
+            _artifacts/dist/goldbach-arxiv-src.zip,
+            goldbach-${{ github.ref_name }}.zip
+          artifactErrorsFailBuild: true
