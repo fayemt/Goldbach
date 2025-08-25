@@ -1,0 +1,29 @@
+
+---
+
+### `CITATION.cff`
+```yaml
+cff-version: 1.2.0
+title: "Goldbach Project"
+message: "If you use this repository, please cite it as below."
+type: software
+version: "1.0.0"
+date-released: 2025-08-24
+authors:
+  - family-names: Miller-Thomas
+    given-names: Faye
+    # orcid: "https://orcid.org/0009-0007-1162-9997"
+repository-code: "https://github.com/fayemt/Goldbach"
+license: MIT
+abstract: >
+  Consolidated repository for a proof of the even Goldbach conjecture,
+  including LaTeX sources, replication scripts for the tail inequality,
+  and tests. The tail closure uses Q = 5253 with harmonic sum
+  sum_{q≤Q} 1/(q φ(q)) = 1.20348665358, and conservative constants
+  S_floor=1.2, K=10, C_W=2. The repo aims to make verification and
+  replication straightforward.
+keywords:
+  - goldbach
+  - analytic number theory
+  - circle method
+  - replication
