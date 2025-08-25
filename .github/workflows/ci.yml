@@ -2,12 +2,12 @@ name: CI (tests + paper + release)
 
 on:
   push:
-  pull_request:
-  workflow_dispatch:
-  # When you push a tag like v1.0.0 this will also run and publish a release
-  push:
+    branches:
+      - "**"
     tags:
       - "v*"
+  pull_request:
+  workflow_dispatch:
 
 jobs:
   python-tests:
@@ -24,8 +24,7 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
       - name: Run tests
-        run: |
-          pytest -q
+        run: pytest -q
 
   build-paper:
     name: Build LaTeX (paper/main.tex)
@@ -36,14 +35,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Use a maintained LaTeX action (runs latexmk with bibtex by default)
+      # latexmk + bibtex (works with \bibliography{refs})
       - name: Compile LaTeX
         uses: xu-cheng/latex-action@v3
         with:
           root_file: main.tex
-          # latexmk default uses pdflatex + bibtex; perfect for our setup
-          latexmk_use_xelatex: false
-          extra_fonts: false
 
       - name: Verify output exists
         run: test -f main.pdf
@@ -60,7 +56,7 @@ jobs:
           cd ..
           mkdir -p dist
           cd paper
-          zip -q ../dist/goldbach-arxiv-src.zip main.tex refs.bib || true
+          zip -q ../dist/goldbach-arxiv-src.zip main.tex refs.bib
           cd ..
           ls -l dist
 
@@ -81,6 +77,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
@@ -90,8 +87,13 @@ jobs:
       - name: Create source zip from current tag (for release)
         run: |
           git archive --format=zip --output goldbach-${GITHUB_REF_NAME}.zip ${GITHUB_REF_NAME}
-          ls -l
-          ls -l _artifacts
+
+      - name: Read SHA256SUMS
+        id: readhash
+        run: |
+          echo "hashes<<EOF" >> $GITHUB_OUTPUT
+          cat _artifacts/SHA256SUMS >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Publish GitHub Release
         uses: ncipollo/release-action@v1
@@ -102,8 +104,8 @@ jobs:
             See CHANGELOG.md for details.
 
             SHA-256:
-            ${{ steps.showhash.outputs.hashes }}
-          artifacts: >
+            ${{ steps.readhash.outputs.hashes }}
+          artifacts: >-
             _artifacts/paper/main.pdf,
             _artifacts/SHA256SUMS,
             _artifacts/dist/goldbach-arxiv-src.zip,
