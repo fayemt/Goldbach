@@ -12,6 +12,8 @@
 % ----- Layout and links -----
 \usepackage[margin=1in]{geometry}
 \usepackage[hidelinks]{hyperref}
+\usepackage[backend=bibtex,style=numeric]{biblatex} % use bibtex backend
+\addbibresource{refs.bib}
 
 % ----- Theorem-like envs and handy macros -----
 \newtheorem{theorem}{Theorem}
@@ -223,5 +225,12 @@ A minimal \texttt{scripts/constants.json}:
   "C_W": 2.0
 }
 \end{verbatim}
+
+% --- References ---
+% keep this \nocite line so the key sources still appear:
+\nocite{OeSHP2014,BMOR2018,Platt2016}
+
+\bibliographystyle{abbrv}   % or 'plain' if you prefer
+\bibliography{refs}         % looks for refs.bib in the same folder
 
 \end{document}
