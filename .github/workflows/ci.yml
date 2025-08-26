@@ -1,12 +1,15 @@
 name: CI (tests + paper + release)
 
+permissions:
+  contents: write  # required to upload release assets
+
 on:
   push:
-    branches:
-      - "**"
-    tags:
-      - "v*"
+    branches: ["**"]
+    tags: ["v*"]
   pull_request:
+  release:
+    types: [published]   # run when you publish a release via the UI
   workflow_dispatch:
 
 jobs:
@@ -14,11 +17,10 @@ jobs:
     name: Python tests
     runs-on: ubuntu-latest
     env:
-      PYTHONPATH: ${{ github.workspace }}   # so tests can import scripts/*
+      PYTHONPATH: ${{ github.workspace }}
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - name: Install test deps
@@ -34,8 +36,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Compile with latexmk + bibtex; force bibtex run with args
-      - name: Compile LaTeX
+      - name: Compile LaTeX (latexmk + bibtex)
         uses: xu-cheng/latex-action@v3
         with:
           root_file: main.tex
@@ -68,9 +69,12 @@ jobs:
           if-no-files-found: error
 
   release:
-    name: Release on tag
+    name: Release on tag or published release
     needs: [python-tests, build-paper]
-    if: startsWith(github.ref, 'refs/tags/v')
+    # Run on tag pushes OR on a published release event
+    if: |
+      github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') ||
+      github.event_name == 'release'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -81,9 +85,11 @@ jobs:
           name: paper-and-checks
           path: ./_artifacts
 
-      - name: Create source zip from current tag (for release)
+      - name: Create source zip from current ref (for release)
         run: |
-          git archive --format=zip --output goldbach-${GITHUB_REF_NAME}.zip ${GITHUB_REF_NAME}
+          REF="${GITHUB_REF_NAME}"
+          if [ "${{ github.event_name }}" = "release" ]; then REF="${{ github.event.release.tag_name }}"; fi
+          git archive --format=zip --output goldbach-${REF}.zip ${REF}
 
       - name: Read SHA256SUMS
         id: readhash
@@ -92,11 +98,14 @@ jobs:
           cat _artifacts/SHA256SUMS >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Publish GitHub Release
+      - name: Publish / Update GitHub Release
         uses: ncipollo/release-action@v1
         with:
-          tag: ${{ github.ref_name }}
-          name: Goldbach Project ${{ github.ref_name }}
+          tag: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}
+          name: Goldbach Project ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}
+          allowUpdates: true            # <-- attach assets to an existing release if one exists
+          omitBodyDuringUpdate: true
+          makeLatest: true
           body: |
             See CHANGELOG.md for details.
 
@@ -106,5 +115,5 @@ jobs:
             _artifacts/paper/main.pdf,
             _artifacts/SHA256SUMS,
             _artifacts/dist/goldbach-arxiv-src.zip,
-            goldbach-${{ github.ref_name }}.zip
+            goldbach-${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}.zip
           artifactErrorsFailBuild: true
